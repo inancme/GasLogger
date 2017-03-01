@@ -4,16 +4,28 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.util.Log;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import android.content.ContentValues;
+import android.database.Cursor;
+import java.util.List;
+import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
+    private String getDateTime() {
+        SimpleDateFormat dateFormat = new SimpleDateFormat(
+                "yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+        Date date = new Date();
+        return dateFormat.format(date);
+    }
     private static final String TAG = "MainActivity";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,16 +35,60 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        SQLiteOpenHelper dbh = new GasLogOpenHelper(this);
+        final SQLiteDatabase db = dbh.getWritableDatabase();
+
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                // Create a new map of values, where column names are the keys
+                for (int i = 0; i<10; i++) {
+                    ContentValues values = new ContentValues();
+                    values.put(GasLogContract.GasLog.COLUMN_NAME_MILAGE, 1000+i);
+                    values.put(GasLogContract.GasLog.COLUMN_NAME_DATE, getDateTime());
+                    values.put(GasLogContract.GasLog.COLUMN_NAME_MONEY, "10.10");
+                    values.put(GasLogContract.GasLog.COLUMN_NAME_VOLUME, "40.35");
+
+                    // Insert the new row, returning the primary key value of the new row
+                    long newRowId = db.insert(GasLogContract.GasLog.TABLE_NAME, null, values);
+                }
             }
         });
-        SQLiteOpenHelper dbh = new GasLogOpenHelper(this);
-        SQLiteDatabase db = dbh.getWritableDatabase();
+
+// Define a projection that specifies which columns from the database
+// you will actually use after this query.
+        String[] projection = {
+                GasLogContract.GasLog._ID,
+                GasLogContract.GasLog.COLUMN_NAME_MILAGE,
+                GasLogContract.GasLog.COLUMN_NAME_VOLUME,
+                GasLogContract.GasLog.COLUMN_NAME_MONEY
+        };
+
+
+// How you want the results sorted in the resulting Cursor
+        String sortOrder =
+                GasLogContract.GasLog.COLUMN_NAME_MILAGE + " DESC";
+
+        Cursor cursor = db.query(
+                GasLogContract.GasLog.TABLE_NAME,                     // The table to query
+                projection,                               // The columns to return
+                null,                                // The columns for the WHERE clause
+                null,                            // The values for the WHERE clause
+                null,                                     // don't group the rows
+                null,                                     // don't filter by row groups
+                sortOrder                                 // The sort order
+        );
+        List itemIds = new ArrayList<>();
+        while(cursor.moveToNext()) {
+            long mileage = cursor.getLong(
+                    cursor.getColumnIndexOrThrow(GasLogContract.GasLog.COLUMN_NAME_MILAGE));
+            itemIds.add(mileage);
+            Log.i(TAG, String.valueOf(mileage));
+        }
+        cursor.close();
+
+
     }
 
     @Override
